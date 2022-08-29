@@ -1,0 +1,7 @@
+.cache/
+.vs/
+debug/
+release/
+test/
+
+compile_commands.json
