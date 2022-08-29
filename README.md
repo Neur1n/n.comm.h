@@ -35,7 +35,6 @@
     <li><a href="#documentation">Documentation</a>
       <ul>
         <li><a href="#n_crc32">n_crc32</a></li>
-        <li><a href="#n_packet">n_packet</a></li>
       </ul>
     </li>
     <li><a href="#license">LICENSE</a></li>
