@@ -11,8 +11,8 @@ MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 See the Mulan PSL v2 for more details.
 
 
-Last update: 2022-08-29 16:30
-Version: v0.1.0
+Last update: 2022-09-02 14:29
+Version: v0.1.1
 ******************************************************************************/
 #ifndef NEU_COMM_H
 #define NEU_COMM_H
@@ -59,18 +59,19 @@ N_INLINE uint32_t n_crc32(const void* data, const size_t length, const uint32_t*
 // Function}}}
 
 //***************************************************************** n_packet{{{
+struct n_packet_info
+{
+  uint16_t sof;  // start of frame
+  uint16_t ctl;  // control code
+  uint32_t cnt;  // total count of packets
+  uint32_t idx;  // index of current packet
+  uint32_t crc;  // CRC of packet
+  uint32_t len;  // length of the chunk
+};
+
 struct n_packet
 {
-  struct
-  {
-    uint16_t sof;  // start of frame
-    uint16_t ctl;  // control code
-    uint32_t cnt;  // total count of packets
-    uint32_t idx;  // index of current packet
-    uint32_t crc;  // CRC of packet
-    uint32_t len;  // length the chunk
-  } frame;
-
+  struct n_packet_info info;
   uint8_t* chunk;
 };
 
@@ -86,17 +87,17 @@ N_INLINE uint32_t n_packet_crc(struct n_packet* packet, const uint32_t* prev)
   uint32_t recv = 0;  // received CRC
   uint32_t calc = 0;  // calculated CRC
 
-  recv = packet->frame.crc;
-  packet->frame.crc = 0;  // CRC itself should not be involved.
+  recv = packet->info.crc;
+  packet->info.crc = 0;  // CRC itself should not be involved.
 
-  size_t flen = sizeof(packet->frame);
-  uint8_t* buf = (uint8_t*)malloc(flen + packet->frame.len);
-  memcpy(buf, &packet->frame, flen);
-  memcpy(buf + flen, packet->chunk, packet->frame.len);
+  size_t ilen = sizeof(struct n_packet_info);
+  uint8_t* buf = (uint8_t*)malloc(ilen + packet->info.len);
+  memcpy(buf, &packet->info, ilen);
+  memcpy(buf + ilen, packet->chunk, packet->info.len);
 
-  calc = n_crc32(buf, sizeof(packet->frame) + packet->frame.len, prev);
+  calc = n_crc32(buf, sizeof(packet->info) + packet->info.len, prev);
 
-  packet->frame.crc = recv;
+  packet->info.crc = recv;
 
   free(buf);
 
@@ -120,12 +121,12 @@ N_INLINE errno_t n_packet_init(
     packet->chunk = (uint8_t*)chunk;
   }
 
-  packet->frame.sof = 0x55AA;
-  packet->frame.ctl = ctl;
-  packet->frame.cnt = cnt;
-  packet->frame.idx = idx;
-  packet->frame.len = len;
-  packet->frame.crc = n_packet_crc(packet, prev_crc);
+  packet->info.sof = 0x55AA;
+  packet->info.ctl = ctl;
+  packet->info.cnt = cnt;
+  packet->info.idx = idx;
+  packet->info.len = len;
+  packet->info.crc = n_packet_crc(packet, prev_crc);
 
   return 0;
 }
@@ -138,24 +139,24 @@ N_INLINE errno_t n_packet_to_string(
     return EINVAL;
   }
 
-  size_t flen = sizeof(packet->frame);
+  size_t ilen = sizeof(struct n_packet_info);
 
-  if (size < (flen + packet->frame.len + 1))
+  if (size < (ilen + packet->info.len + 1))
   {
     return ENOBUFS;
   }
 
   char bytes[4] = {0};
-  char* data_1 = (char*)(&packet->frame);
+  char* data_1 = (char*)(&packet->info);
   char* data_2 = (char*)(packet->chunk);
 
-  for (size_t i = 0; i < flen; ++i)
+  for (size_t i = 0; i < ilen; ++i)
   {
     snprintf(bytes, 4, "%02X ", (uint8_t)data_1[i]);
     strcat_s(buffer, size, bytes);
   }
 
-  for (size_t i = 0; i < packet->frame.len; ++i)
+  for (size_t i = 0; i < packet->info.len; ++i)
   {
     snprintf(bytes, 4, "%02X ", (uint8_t)data_2[i]);
     strcat_s(buffer, size, bytes);
