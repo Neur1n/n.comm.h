@@ -11,8 +11,8 @@ MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 See the Mulan PSL v2 for more details.
 
 
-Last update: 2022-09-02 14:29
-Version: v0.1.1
+Last update: 2022-09-14 15:40
+Version: v0.1.2
 ******************************************************************************/
 #ifndef NEU_COMM_H
 #define NEU_COMM_H
@@ -77,7 +77,7 @@ struct n_packet
 
 N_INLINE uint32_t n_packet_crc(struct n_packet* packet, const uint32_t* prev)
 {
-  if (packet == NULL)
+  if (packet == NULL || packet->chunk == NULL)
   {
     return 0;
   }
@@ -129,6 +129,16 @@ N_INLINE errno_t n_packet_init(
   packet->info.crc = n_packet_crc(packet, prev_crc);
 
   return 0;
+}
+
+N_INLINE size_t n_packet_size(const struct n_packet* packet)
+{
+  if (packet == NULL)
+  {
+    return 0;
+  }
+
+  return sizeof(struct n_packet_info) + packet->info.len;
 }
 
 N_INLINE errno_t n_packet_to_string(
